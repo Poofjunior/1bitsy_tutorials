@@ -1,0 +1,1 @@
+arm-none-eabi-gcc -g3 -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 --specs=rdimon.specs -I../libopencm3/include -DSTM32F4 -nostartfiles -L../libopencm3/lib -Wl,-T,1bitsy.ld encoder_example.c -lopencm3_stm32f4 -o encoder_example.elf
