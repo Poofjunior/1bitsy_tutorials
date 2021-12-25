@@ -29,3 +29,5 @@ run
   * pg 551 has similar info to pg 33 in AN4776
 * [STM32F405xx Datasheet](https://www.st.com/resource/en/datasheet/dm00037051.pdf)
   * pg 62 has the Alt Function Register Mapping for the output pin.
+* [STM32F0 with libopencm3](https://bdebyl.net/post/stm32-part1/)
+  * General timer example using libopencm3

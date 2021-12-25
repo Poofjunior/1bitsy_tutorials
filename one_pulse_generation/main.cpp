@@ -6,7 +6,7 @@
 
 //extern "C" int initialise_monitor_handles(void); // compile with SEMIHOSTING set
 
-uint32_t pulse_width_us = 10000; // [us], assuming prescaling correctly.
+uint32_t pulse_width_us = 1; // [us], assuming prescaling correctly.
 
 int main(void)
 {
@@ -33,6 +33,12 @@ int main(void)
     timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, // no peripheral clock division
                          TIM_CR1_CMS_EDGE, // edge alignment
                          TIM_CR1_DIR_UP);   // count up.
+
+    // value is <desired_scaled_value> - 1.
+    // i.e: scaling by 1 (i.e: no desired prescale) results in a value of 0.
+    // input freq is 42000000 [MHz]
+    //timer_set_prescaler(TIM3, (42 - 1));
+    timer_set_prescaler(TIM3, (84 - 1));  // each clock tick is 1 [us]
 
 
 
