@@ -31,3 +31,7 @@ run
   * pg 62 has the Alt Function Register Mapping for the output pin.
 * [STM32F0 with libopencm3](https://bdebyl.net/post/stm32-part1/)
   * General timer example using libopencm3
+
+Also:
+* [AN4013](https://www.st.com/resource/en/application_note/dm00042534-stm32-crossseries-timer-overview-stmicroelectronics.pdf)
+  * Retriggerable one-pulse mode. (Not available on F4 series.)

@@ -10,6 +10,7 @@ uint32_t pulse_width_us = 1; // [us], assuming prescaling correctly.
 
 int main(void)
 {
+    // Set internal clock to run at 168[MHz] using external 25[MHz] source.
     rcc_clock_setup_pll(&rcc_hse_25mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
 //    initialise_monitor_handles();
 
@@ -30,27 +31,52 @@ int main(void)
     rcc_periph_clock_enable(RCC_TIM3);
 
     // Set timer mode.
-    timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, // no peripheral clock division
+    timer_set_mode(TIM3, TIM_CR1_CKD_CK_INT, // internal clock. no division
                          TIM_CR1_CMS_EDGE, // edge alignment
                          TIM_CR1_DIR_UP);   // count up.
 
     // value is <desired_scaled_value> - 1.
     // i.e: scaling by 1 (i.e: no desired prescale) results in a value of 0.
-    // input freq is 42000000 [MHz]
-    //timer_set_prescaler(TIM3, (42 - 1));
-    timer_set_prescaler(TIM3, (84 - 1));  // each clock tick is 1 [us]
+    // TIM3 input freq is 84000000 [MHz]. // TODO: where?
+    //timer_set_prescaler(TIM3, (84 - 1));  // each clock tick is 1 [us]
+    timer_set_prescaler(TIM3, 0); // Clock runs at full speed
 
-
-
+    // Configure one-shot mode:
+    // pulse width determined by: (TIMx_ARR - TIMx_CCRx + 1)
     timer_one_shot_mode(TIM3);
     timer_set_oc_mode(TIM3, TIM_OC1, TIM_OCM_PWM2);
     timer_enable_oc_output(TIM3, TIM_OC1);
     timer_enable_break_main_output(TIM3);
-    timer_set_oc_value(TIM3, TIM_OC1, 1); // No delay. Pulse starts immediately.
-                                          // value needs to be > 0.
-    timer_set_period(TIM3, pulse_width_us);
+    timer_set_oc_value(TIM3, TIM_OC1, 1); // Pulse starts with minimum delay.
+    // oc value must be > 0 which means pulse start cannot come earlier
+    // than 1 timer cycle later.
+    timer_set_period(TIM3, pulse_width_us*84);
     //timer_enable_counter(TIM3); // enable it in the loop.
+
+
+    //  Better way to do this would be re-triggerable one-pulse mode.
+    // but it's only available on F7, Lx series only:
+    // It would look something like this:
+ /*
+    timer_one_shot_mode(TIM3);
+
+    timer_slave_set_mode(TIM3, TIM_SMCR_SMS_TM); // Set Trigger Mode.
+    timer_slave_set_trigger(TIM3, TIM_SMCR_TS_ITR0); // Set internal Trigger 0.
+
+    //timer_set_oc_mode(...) wont work bc the common mask is too small
+    TIM_SMCR(TIM3) &= ~0b1111;
+    TIM_SMCR(TIM3) != 0b1000; // Retriggerable one-pulse mode.
+
+    timer_enable_oc_output(TIM3, TIM_OC1);
+    timer_enable_break_main_output(TIM3);
+    timer_set_oc_value(TIM3, TIM_OC1, 0); // Pulse starts with no delay.
+    timer_set_period(TIM3, pulse_width_us*84 - 1);
+    timer_enable_counter(TIM3);
+*/
+
+
 /*
+    // Configure PWM
     timer_set_oc_mode(TIM3, TIM_OC1, TIM_OCM_PWM2);
     timer_enable_oc_output(TIM3, TIM_OC1);
     timer_enable_break_main_output(TIM3);
@@ -59,13 +85,16 @@ int main(void)
     timer_enable_counter(TIM3);
 */
 
+
     while(1)
     {
-    gpio_toggle(GPIOA, (GPIO7 | GPIO8));
-    // Trigger the pulse by enabling the timer.
-    timer_enable_counter(TIM3);
-    for (uint32_t count = 0; count < 16800000/2; ++count)
-    {}
+        gpio_toggle(GPIOA, (GPIO7 | GPIO8));
+        gpio_toggle(GPIOA, (GPIO7 | GPIO8));
+        // Trigger the pulse by enabling the timer.
+        timer_enable_counter(TIM3);
+        // With the high-end series timer we would apply trigger here.
+        for (uint32_t count = 0; count < 16800000/2; ++count)
+        {}
 
     }
     return 0;
