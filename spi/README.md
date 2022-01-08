@@ -20,3 +20,4 @@ run
 
 ## References:
 * [Configuration Sanity Check](https://cpp.hotexamples.com/examples/-/-/SPI_I2SCFGR/cpp-spi_i2scfgr-function-examples.html)
+* [SPI Peripheral Based CS Control](https://community.st.com/s/question/0D50X00009XkYEnSAN/spi-master-nss-always-low-in-stm32f4)
