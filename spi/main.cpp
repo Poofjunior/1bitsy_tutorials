@@ -1,15 +1,9 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
-#include <libopencm3/stm32/timer.h>
-#include <libopencm3/stm32/common/timer_common_all.h>
+#include <libopencm3/stm32/spi.h>
 #include <stdio.h>
 
 extern "C" int initialise_monitor_handles(void); // compile with SEMIHOSTING set
-
-//#include <libopencm3/stm32/dma.h>
-#include <libopencm3/cm3/nvic.h>
-#include <libopencm3/stm32/spi.h>
-#include <errno.h>
 
 
 static void clock_setup(void)
@@ -29,11 +23,10 @@ static void clock_setup(void)
 
 static void spi_setup(void)
 {
-
+    // SPI NSS pin will be tri-stated so it needs a pull-up resistor.
     // Configure GPIOs: SS=PA4, SCK=PA5, MISO=PA6, and MOSI=PA7
     gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
                     GPIO4 | GPIO5 | GPIO6 | GPIO7 );
-
     gpio_set_af(GPIOA, GPIO_AF5, GPIO4 | GPIO5 | GPIO6 | GPIO7);
 
     // Reset SPI, SPI_CR1 register cleared, SPI is disabled
@@ -53,25 +46,12 @@ static void spi_setup(void)
     spi_set_full_duplex_mode(SPI1);
     spi_set_dff_8bit(SPI1);
     spi_send_msb_first(SPI1);
-    //spi_init_master(SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_64, SPI_CR1_CPOL_CLK_TO_1_WHEN_IDLE,
-    //              SPI_CR1_CPHA_CLK_TRANSITION_2, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
 
-    // Set NSS management to software.
-
-    // Note:
-    // Setting nss high is very important, even if we are controlling the GPIO
-    // ourselves this bit needs to be at least set to 1, otherwise the spi
-    // peripheral will not send any data out.
-
-    // Apparently SS is tri-stated?
-    // https://community.st.com/s/question/0D50X0000AFsP2gSQF/nss-pin-chip-select-driven-by-hardware
-
-    //spi_disable_software_slave_management(SPI1);
+    // Bringing the CS line low is handled by the peripheral
     spi_enable_software_slave_management(SPI1);
+    // NSS must be set to high or SPI peripheral will not output any data.
     spi_set_nss_high(SPI1);
-
-    // Enable SPI1 periph.
-    spi_enable(SPI1);
+    spi_enable_ss_output(SPI1); // This needs to get set after enabling SPI.
 }
 
 static void gpio_setup(void)
@@ -91,18 +71,21 @@ int main(void)
 
 	while (1)
     {
-		gpio_toggle(GPIOA, GPIO8);
-
-		/* printf the value that SPI should send */
-		printf("Counter: %i  SPI Sent Byte: %i", counter, (uint8_t) counter);
-		/* blocking send of the byte out SPI1 */
-		spi_send(SPI1, (uint8_t) counter);
-        // Tie the hardware MOSI and MISO lines together to read back the
-        // same byte.
-		rx_value = spi_read(SPI1);
-		printf("    SPI Received Byte: %i\r\n", rx_value);
-
-		counter++;
+        gpio_toggle(GPIOA, GPIO8);
+        spi_enable(SPI1); // lowers the NSS pin.
+        for (uint8_t i = 0; i < 8; ++i)
+        {
+		    /* printf the value that SPI should send */
+		    printf("Counter: %i  SPI Sent Byte: %i", counter, (uint8_t) counter);
+		    /* blocking send of the byte out SPI1 */
+		    spi_send(SPI1, (uint8_t) counter);
+            // Tie the hardware MOSI and MISO lines together to read back the
+            // same byte.
+		    rx_value = spi_read(SPI1);
+		    printf("    SPI Received Byte: %i\r\n", rx_value);
+		    counter++;
+        }
+        spi_disable(SPI1); // raises the NSS pin.
 	}
 
 	return 0;

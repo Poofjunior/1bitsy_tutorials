@@ -1,7 +1,9 @@
-## SPI
+## SPI Master Mode
+This example demos the SPI peripheral in master-mode with a hardware-controlled slave-select pin.
 
 ## Notes
 
+SPI NSS Pin is tri-stated, so it needs a pull-up resistor.
 
 ## Debugging
 
